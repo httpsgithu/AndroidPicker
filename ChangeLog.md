@@ -1,5 +1,80 @@
 # 更新日志
 
+## 4.1.12 - 2023.07.22
+
+- 避免内存泄露，参阅 [issues#337](https://github.com/gzu-liyujiang/AndroidPicker/issues/337) 。
+- 地址选择器内置的省市区数据更新（2022版）。
+
+## 4.1.11 - 2022.11.09
+
+- Fix [issues#322](https://github.com/gzu-liyujiang/AndroidPicker/issues/322) 。
+
+## 4.1.10 - 2022.11.04
+
+- Fix [issues#324](https://github.com/gzu-liyujiang/AndroidPicker/issues/324) 。
+- Opt [issues#294](https://github.com/gzu-liyujiang/AndroidPicker/issues/294) [issues#296](https://github.com/gzu-liyujiang/AndroidPicker/issues/296) 。
+- `XXXPicker`和`DialogFragment`结合使用示例。
+
+## 4.1.9 - 2022.08.31
+
+- Fix [issues#292](https://github.com/gzu-liyujiang/AndroidPicker/issues/292) 。
+- Fix [issues#290](https://github.com/gzu-liyujiang/AndroidPicker/issues/290) 。
+- 增加 API 说明文档。
+
+## 4.1.8 - 2022.07.12
+
+- Fix [issues#313](https://github.com/gzu-liyujiang/AndroidPicker/issues/313) 。
+- Fix [issues#304](https://github.com/gzu-liyujiang/AndroidPicker/issues/304) 。
+- Fix `setStyle`只能在其他设置项之前调用，否则会导致其他设置项失效。
+- Fix [issues#293](https://github.com/gzu-liyujiang/AndroidPicker/issues/293) 。
+
+## 4.1.7 - 2022.01.21
+
+- 添加可直接安卓体验的 demo.apk ，参阅 [gitee#note_7765234](https://gitee.com/li_yu_jiang/AndroidPicker#note_7765234)。
+- 修复时间选择器未来小时数计算错误问题。
+- 日历选择器支持启用左右翻页，参阅 [issues#288](https://github.com/gzu-liyujiang/AndroidPicker/issues/288) 。
+- 时间选择器上午下午联动优化，参阅 [issues#284](https://github.com/gzu-liyujiang/AndroidPicker/issues/284) 。
+
+## 4.1.6 - 2021.12.20
+
+- 修复滚轮选择器部分XML属性设置无效问题，参阅 [issues#281](https://github.com/gzu-liyujiang/AndroidPicker/issues/281)；
+- 修复滚轮选择器设置了选中项文字加大加粗时滑动会导致其他条目错位问题，参阅 [issues#279](https://github.com/gzu-liyujiang/AndroidPicker/issues/279)；
+
+## 4.1.5 - 2021.12.05
+
+- 修复日期时间选择器未来日期时间计算错误问题，参阅 [issues#276](https://github.com/gzu-liyujiang/AndroidPicker/issues/276)；
+- 修复滚轮无法设置白色背景及选中项加粗属性可能无效问题，参阅 [issues#274](https://github.com/gzu-liyujiang/AndroidPicker/issues/274) [issues#268](https://github.com/gzu-liyujiang/AndroidPicker/issues/268)；
+- 日历日期选择器范围选择允许选择单个日期，参阅 [issues#271](https://github.com/gzu-liyujiang/AndroidPicker/issues/271)；
+
+## 4.1.4 - 2021.11.16
+
+- 时间选择器支持设置时分秒间隔，参阅 [issues#270](https://github.com/gzu-liyujiang/AndroidPicker/issues/270)；
+- 修复滚轮选择器设置选中项文字加大加粗可能导致错乱问题（注：建议通过`setStyle`定制样式设置文字加大，若通过`setSelectedTextSize`设置，该解决方案会导致选择器展示时跳动一下）；
+- 代码精简，移除`declare-styleable`冗余；
+
+## 4.1.3 - 2021.11.07
+
+- 滚轮选择器条目文字过长截取优化；
+- 日期时间选择器支持滚动联动不重置开关；
+- 滚轮选择器条目滚动展示效果优化；
+
+## 4.1.2 - 2021.11.01
+
+- 修复 Android 7.x 上滚轮选择器选中项重叠问题；
+
+## 4.1.1 - 2021.10.28
+
+- 滚轮选择器选中项文字支持加大加粗；
+- 部分细节优化，部分效果图更新；
+
+## 4.1.0 - 2021.10.28
+
+- 支持滚轮选择器选中项设置圆角纯色背景；
+- 所以选择器文本国际化，内置支持中文及英文；
+- 手机号码前缀选择器数据完善，支持全球的国家及地区；
+- 车牌、星座及性别等选择器调整，民族、星座及性别等默认值设置优化；
+- 日历选择器支持自定义节日文本；
+
 ## 4.0.1 - 2021.09.26
 
 - 优化选择器标题设置，避免设置不生效问题；

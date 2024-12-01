@@ -14,6 +14,7 @@
 package com.github.gzuliyujiang.wheelpicker;
 
 import android.app.Activity;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.StyleRes;
@@ -33,6 +34,7 @@ import com.github.gzuliyujiang.wheelpicker.entity.ProvinceEntity;
 import com.github.gzuliyujiang.wheelpicker.impl.AddressProvider;
 import com.github.gzuliyujiang.wheelpicker.impl.AssetAddressLoader;
 import com.github.gzuliyujiang.wheelpicker.utility.AddressJsonParser;
+import com.github.gzuliyujiang.wheelview.widget.WheelView;
 
 import java.util.List;
 
@@ -64,11 +66,7 @@ public class AddressPicker extends LinkagePicker implements AddressReceiver {
     public AddressPicker(@NonNull Activity activity, @StyleRes int themeResId) {
         super(activity, themeResId);
     }
-    @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("地址选择");
-    }
+
     @Override
     protected void initData() {
         super.initData();
@@ -108,9 +106,9 @@ public class AddressPicker extends LinkagePicker implements AddressReceiver {
     @Override
     protected void onOk() {
         if (onAddressPickedListener != null) {
-            ProvinceEntity province = (ProvinceEntity) wheelLayout.getFirstWheelView().getCurrentItem();
-            CityEntity city = (CityEntity) wheelLayout.getSecondWheelView().getCurrentItem();
-            CountyEntity county = (CountyEntity) wheelLayout.getThirdWheelView().getCurrentItem();
+            ProvinceEntity province = wheelLayout.getFirstWheelView().getCurrentItem();
+            CityEntity city = wheelLayout.getSecondWheelView().getCurrentItem();
+            CountyEntity county = wheelLayout.getThirdWheelView().getCurrentItem();
             onAddressPickedListener.onAddressPicked(province, city, county);
         }
     }
@@ -141,6 +139,30 @@ public class AddressPicker extends LinkagePicker implements AddressReceiver {
                                @NonNull AddressJsonParser jsonParser) {
         this.addressMode = addressMode;
         setAddressLoader(new AssetAddressLoader(getContext(), assetPath), jsonParser);
+    }
+
+    public final WheelView getProvinceWheelView() {
+        return wheelLayout.getFirstWheelView();
+    }
+
+    public final WheelView getCityWheelView() {
+        return wheelLayout.getSecondWheelView();
+    }
+
+    public final WheelView getCountyWheelView() {
+        return wheelLayout.getThirdWheelView();
+    }
+
+    public final TextView getProvinceLabelView() {
+        return wheelLayout.getFirstLabelView();
+    }
+
+    public final TextView getCityLabelView() {
+        return wheelLayout.getSecondLabelView();
+    }
+
+    public final TextView getCountyLabelView() {
+        return wheelLayout.getThirdLabelView();
     }
 
 }

@@ -14,16 +14,16 @@
 package com.github.gzuliyujiang.filepicker;
 
 import android.content.Context;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.os.Environment;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -32,8 +32,7 @@ import com.github.gzuliyujiang.filepicker.adapter.FileAdapter;
 import com.github.gzuliyujiang.filepicker.adapter.FileEntity;
 import com.github.gzuliyujiang.filepicker.adapter.PathAdapter;
 import com.github.gzuliyujiang.filepicker.adapter.ViewHolder;
-import com.github.gzuliyujiang.filepicker.annotation.ExplorerMode;
-import com.github.gzuliyujiang.filepicker.contract.OnFileClickedListener;
+import com.github.gzuliyujiang.filepicker.contract.OnFileLoadedListener;
 import com.github.gzuliyujiang.filepicker.contract.OnPathClickedListener;
 
 import java.io.File;
@@ -46,16 +45,15 @@ import java.util.Locale;
  * @since 2021/6/10 18:50
  */
 @SuppressWarnings("unused")
-public class FileExplorer extends FrameLayout implements OnPathClickedListener {
-    private int explorerMode = ExplorerMode.FILE;
-    private File initDir;
+public class FileExplorer extends FrameLayout implements OnFileLoadedListener, OnPathClickedListener {
     private CharSequence emptyHint;
     private FileAdapter fileAdapter;
     private PathAdapter pathAdapter;
+    private ProgressBar loadingView;
     private RecyclerView fileListView;
     private TextView emptyHintView;
     private RecyclerView pathListView;
-    private OnFileClickedListener onFileClickedListener;
+    private ExplorerConfig explorerConfig;
 
     public FileExplorer(Context context) {
         super(context);
@@ -79,24 +77,67 @@ public class FileExplorer extends FrameLayout implements OnPathClickedListener {
     }
 
     private void init(Context context) {
-        initDir = getDefaultDir();
+        explorerConfig = new ExplorerConfig(context);
         View contentView = inflate(context, R.layout.file_picker_content, this);
+        pathListView = contentView.findViewById(R.id.file_picker_path_list);
+        loadingView = contentView.findViewById(R.id.file_picker_loading);
+        fileListView = contentView.findViewById(R.id.file_picker_file_list);
+        emptyHintView = contentView.findViewById(R.id.file_picker_empty_hint);
         pathAdapter = new PathAdapter(context);
         pathAdapter.setOnPathClickedListener(this);
-        pathListView = contentView.findViewById(R.id.file_picker_path_list);
         pathListView.setAdapter(pathAdapter);
-        fileAdapter = new FileAdapter(context);
-        fileAdapter.setOnPathClickedListener(this);
-        fileAdapter.setOnlyListDir(false);
-        fileAdapter.setShowHideDir(true);
-        fileAdapter.setShowHomeDir(true);
-        fileAdapter.setShowUpDir(true);
-        fileAdapter.loadData(initDir);
-        fileListView = contentView.findViewById(R.id.file_picker_file_list);
+        fileAdapter = new FileAdapter(explorerConfig);
         fileListView.setAdapter(fileAdapter);
         emptyHint = Locale.getDefault().getDisplayLanguage().contains("中文") ? "<空>" : "<Empty>";
-        emptyHintView = contentView.findViewById(R.id.file_picker_empty_hint);
         emptyHintView.setText(emptyHint);
+    }
+
+    /**
+     * 以默认配置加载文件列表
+     */
+    public void load() {
+        load(null);
+    }
+
+    /**
+     * 以自定义配置加载文件列表
+     */
+    public void load(@Nullable ExplorerConfig config) {
+        if (config != null) {
+            explorerConfig = config;
+            fileAdapter = new FileAdapter(config);
+            fileListView.setAdapter(fileAdapter);
+        }
+        explorerConfig.setOnFileLoadedListener(this);
+        explorerConfig.setOnPathClickedListener(this);
+        refreshCurrent(explorerConfig.getRootDir());
+    }
+
+    @Override
+    public void onFileLoaded(@NonNull File file) {
+        loadingView.setVisibility(INVISIBLE);
+        fileListView.setVisibility(View.VISIBLE);
+        int itemCount = fileAdapter.getItemCount();
+        if (explorerConfig.isShowHomeDir()) {
+            itemCount--;
+        }
+        if (explorerConfig.isShowUpDir()) {
+            itemCount--;
+        }
+        if (itemCount < 1) {
+            DialogLog.print("no files, or dir is empty");
+            emptyHintView.setVisibility(View.VISIBLE);
+            emptyHintView.setText(emptyHint);
+        } else {
+            DialogLog.print("files or dirs count: " + itemCount);
+            emptyHintView.setVisibility(View.INVISIBLE);
+        }
+        pathListView.post(new Runnable() {
+            @Override
+            public void run() {
+                pathListView.scrollToPosition(pathAdapter.getItemCount() - 1);
+            }
+        });
     }
 
     @Override
@@ -112,40 +153,15 @@ public class FileExplorer extends FrameLayout implements OnPathClickedListener {
                 refreshCurrent(file);
                 return;
             }
-            if (onFileClickedListener != null) {
-                onFileClickedListener.onFileClicked(file);
+            if (explorerConfig.getOnFileClickedListener() != null) {
+                explorerConfig.getOnFileClickedListener().onFileClicked(file);
             }
         }
     }
 
-    public final File getDefaultDir() {
-        if (initDir != null) {
-            return initDir;
-        }
-        if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-            return getContext().getExternalFilesDir(null);
-        } else {
-            return getContext().getFilesDir();
-        }
-    }
-
-    public void setInitDir(@ExplorerMode int explorerMode, File initDir) {
-        if (this.explorerMode != explorerMode) {
-            this.explorerMode = explorerMode;
-            fileAdapter.setOnlyListDir(explorerMode == ExplorerMode.DIRECTORY);
-        }
-        if (initDir == null) {
-            initDir = getDefaultDir();
-        }
-        this.initDir = initDir;
-        refreshCurrent(initDir);
-    }
-
-    @ExplorerMode
-    public final int getExplorerMode() {
-        return explorerMode;
-    }
-
+    /**
+     * 设置指定路径下没有文件或目录时的提示语
+     */
     public void setEmptyHint(@NonNull CharSequence emptyHint) {
         if (TextUtils.equals(this.emptyHint, emptyHint)) {
             return;
@@ -154,86 +170,22 @@ public class FileExplorer extends FrameLayout implements OnPathClickedListener {
         emptyHintView.setText(emptyHint);
     }
 
+    /**
+     * 重新加载指定路径下的文件或目录到当前列表
+     */
     public final void refreshCurrent(File current) {
         if (current == null) {
+            DialogLog.print("current dir is null");
             return;
         }
+        loadingView.setVisibility(VISIBLE);
+        fileListView.setVisibility(View.INVISIBLE);
+        emptyHintView.setVisibility(View.INVISIBLE);
+        long millis = System.currentTimeMillis();
         pathAdapter.updatePath(current);
         fileAdapter.loadData(current);
-        int itemCount = fileAdapter.getItemCount();
-        if (fileAdapter.isShowHomeDir()) {
-            itemCount--;
-        }
-        if (fileAdapter.isShowUpDir()) {
-            itemCount--;
-        }
-        if (itemCount < 1) {
-            DialogLog.print("no files, or dir is empty");
-            emptyHintView.setVisibility(View.VISIBLE);
-            emptyHintView.setText(emptyHint);
-        } else {
-            DialogLog.print("files or dirs count: " + itemCount);
-            emptyHintView.setVisibility(View.GONE);
-        }
-        pathListView.post(new Runnable() {
-            @Override
-            public void run() {
-                pathListView.scrollToPosition(pathAdapter.getItemCount() - 1);
-            }
-        });
-    }
-
-    public void setOnFileClickedListener(OnFileClickedListener listener) {
-        this.onFileClickedListener = listener;
-    }
-
-    public void setAllowExtensions(String[] allowExtensions) {
-        fileAdapter.setAllowExtensions(allowExtensions);
-        fileAdapter.refreshData();
-    }
-
-    public void setShowUpDir(boolean showUpDir) {
-        fileAdapter.setShowUpDir(showUpDir);
-        fileAdapter.refreshData();
-    }
-
-    public void setShowHomeDir(boolean showHomeDir) {
-        fileAdapter.setShowHomeDir(showHomeDir);
-        fileAdapter.refreshData();
-    }
-
-    public void setShowHideDir(boolean showHideDir) {
-        fileAdapter.setShowHideDir(showHideDir);
-        fileAdapter.refreshData();
-    }
-
-    public void setFileIcon(Drawable fileIcon) {
-        fileAdapter.setFileIcon(fileIcon);
-        fileAdapter.refreshData();
-    }
-
-    public void setFolderIcon(Drawable folderIcon) {
-        fileAdapter.setFolderIcon(folderIcon);
-        fileAdapter.refreshData();
-    }
-
-    public void setHomeIcon(Drawable homeIcon) {
-        fileAdapter.setHomeIcon(homeIcon);
-        fileAdapter.notifyItemRangeChanged(0, Math.min(2, fileAdapter.getItemCount()));
-    }
-
-    public void setUpIcon(Drawable upIcon) {
-        fileAdapter.setUpIcon(upIcon);
-        fileAdapter.notifyItemRangeChanged(0, Math.min(2, fileAdapter.getItemCount()));
-    }
-
-    public void setArrowIcon(Drawable arrowIcon) {
-        pathAdapter.setArrowIcon(arrowIcon);
-    }
-
-    public void setItemHeight(int itemHeight) {
-        fileAdapter.setItemHeight(itemHeight);
-        fileAdapter.refreshData();
+        long spent = System.currentTimeMillis() - millis;
+        DialogLog.print("spent: " + spent + " ms" + ", async=" + explorerConfig.isLoadAsync() + ", thread=" + Thread.currentThread());
     }
 
     public final FileAdapter getFileAdapter() {
@@ -244,18 +196,31 @@ public class FileExplorer extends FrameLayout implements OnPathClickedListener {
         return pathAdapter;
     }
 
-    public final File getRootDir() {
-        return fileAdapter.getRootDir();
+    public ExplorerConfig getExplorerConfig() {
+        return explorerConfig;
     }
 
+    public final File getRootDir() {
+        return explorerConfig.getRootDir();
+    }
+
+    /**
+     * 获取当前加载的文件夹
+     */
     public final File getCurrentFile() {
         return fileAdapter.getCurrentFile();
     }
 
+    /**
+     * 获取各级路径所在的视图
+     */
     public final RecyclerView getPathListView() {
         return pathListView;
     }
 
+    /**
+     * 获取文件或目录列表所在的视图
+     */
     public final RecyclerView getFileListView() {
         return fileListView;
     }

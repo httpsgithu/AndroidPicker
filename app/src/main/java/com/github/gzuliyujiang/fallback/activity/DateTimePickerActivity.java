@@ -75,7 +75,7 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
             }
         });
         wheelLayout.setDateMode(DateMode.YEAR_MONTH_DAY);
-        wheelLayout.setTimeMode(TimeMode.HOUR_12_HAS_SECOND);
+        wheelLayout.setTimeMode(TimeMode.HOUR_24_NO_SECOND);
         wheelLayout.setRange(DatimeEntity.now(), DatimeEntity.yearOnFuture(10));
         wheelLayout.setDateLabel("年", "月", "日");
         wheelLayout.setTimeLabel("时", "分", "秒");
@@ -84,30 +84,36 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
 
     public void onYearMonthDay(View view) {
         DatePicker picker = new DatePicker(this);
-        picker.setBodyWidth(240);
+        //picker.setBodyWidth(240);
         DateWheelLayout wheelLayout = picker.getWheelLayout();
         wheelLayout.setDateMode(DateMode.YEAR_MONTH_DAY);
-        wheelLayout.setDateLabel("年", "月", "日");
-        wheelLayout.setRange(DateEntity.today(), DateEntity.yearOnFuture(30), DateEntity.yearOnFuture(10));
+        //wheelLayout.setDateLabel("年", "月", "日");
+        wheelLayout.setDateFormatter(new UnitDateFormatter());
+        //wheelLayout.setRange(DateEntity.target(2021, 1, 1), DateEntity.target(2050, 12, 31), DateEntity.today());
+        wheelLayout.setRange(DateEntity.today(), DateEntity.monthOnFuture(3));
         wheelLayout.setCurtainEnabled(true);
         wheelLayout.setCurtainColor(0xFFCC0000);
         wheelLayout.setIndicatorEnabled(true);
         wheelLayout.setIndicatorColor(0xFFFF0000);
         wheelLayout.setIndicatorSize(view.getResources().getDisplayMetrics().density * 2);
         wheelLayout.setTextColor(0xCCCC0000);
+        wheelLayout.setTextSize(14 * getResources().getDisplayMetrics().scaledDensity);
+        //注：建议通过`setStyle`定制样式设置文字加大，若通过`setSelectedTextSize`设置，该解决方案会导致选择器展示时跳动一下
+        //wheelLayout.setSelectedTextSize(16 * getResources().getDisplayMetrics().scaledDensity);
         wheelLayout.setSelectedTextColor(0xFFFF0000);
-        wheelLayout.getYearLabelView().setTextColor(0xFF999999);
-        wheelLayout.getMonthLabelView().setTextColor(0xFF999999);
-        wheelLayout.getDayLabelView().setTextColor(0xFF999999);
+        //wheelLayout.getYearLabelView().setTextColor(0xFF999999);
+        //wheelLayout.getMonthLabelView().setTextColor(0xFF999999);
         picker.setOnDatePickedListener(this);
+        picker.getWheelLayout().setResetWhenLinkage(false);
         picker.show();
     }
 
     public void onYearMonth(View view) {
         DatePicker picker = new DatePicker(this);
         picker.setBodyWidth(240);
-        picker.getWheelLayout().setDateMode(DateMode.YEAR_MONTH);
-        picker.getWheelLayout().setDateLabel("年", "月", "");
+        DateWheelLayout wheelLayout = picker.getWheelLayout();
+        wheelLayout.setDateMode(DateMode.YEAR_MONTH);
+        wheelLayout.setDateLabel("年", "月", "");
         picker.setOnDatePickedListener(this);
         picker.show();
     }
@@ -115,8 +121,11 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
     public void onMonthDay(View view) {
         DatePicker picker = new DatePicker(this);
         picker.setBodyWidth(200);
-        picker.getWheelLayout().setDateMode(DateMode.MONTH_DAY);
-        picker.getWheelLayout().setDateFormatter(new UnitDateFormatter());
+        DateWheelLayout wheelLayout = picker.getWheelLayout();
+        //注：`setStyle`只能在其他设置项之前调用，否则会导致其他项设置失效
+        wheelLayout.setStyle(R.style.WheelStyleDemo);
+        wheelLayout.setDateMode(DateMode.MONTH_DAY);
+        wheelLayout.setDateFormatter(new UnitDateFormatter());
         picker.setOnDatePickedListener(this);
         picker.show();
     }
@@ -125,10 +134,11 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
         TimePicker picker = new TimePicker(this);
         picker.setBodyWidth(140);
         TimeWheelLayout wheelLayout = picker.getWheelLayout();
-        wheelLayout.setRange(TimeEntity.target(1, 0, 0), TimeEntity.target(12, 59, 59));
+        wheelLayout.setRange(TimeEntity.target(0, 0, 0), TimeEntity.target(24, 59, 59));
         wheelLayout.setTimeMode(TimeMode.HOUR_12_NO_SECOND);
         wheelLayout.setTimeLabel(":", " ", "");
-        wheelLayout.setDefaultValue(TimeEntity.now());
+        wheelLayout.setDefaultValue(TimeEntity.target(24, 0, 0));
+        wheelLayout.setTimeStep(1, 10, 1);
         picker.setOnTimeMeridiemPickedListener(new OnTimeMeridiemPickedListener() {
             @Override
             public void onTimePicked(int hour, int minute, int second, boolean isAnteMeridiem) {
@@ -142,9 +152,11 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
 
     public void onTime24(View view) {
         TimePicker picker = new TimePicker(this);
-        picker.getWheelLayout().setTimeMode(TimeMode.HOUR_24_HAS_SECOND);
-        picker.getWheelLayout().setTimeFormatter(new UnitTimeFormatter());
-        picker.getWheelLayout().setDefaultValue(TimeEntity.now());
+        TimeWheelLayout wheelLayout = picker.getWheelLayout();
+        wheelLayout.setTimeMode(TimeMode.HOUR_24_HAS_SECOND);
+        wheelLayout.setTimeFormatter(new UnitTimeFormatter());
+        wheelLayout.setDefaultValue(TimeEntity.now());
+        wheelLayout.setResetWhenLinkage(false);
         picker.setOnTimePickedListener(this);
         picker.show();
     }
@@ -153,6 +165,7 @@ public class DateTimePickerActivity extends BackAbleActivity implements OnDatePi
         BirthdayPicker picker = new BirthdayPicker(this);
         picker.setDefaultValue(1991, 11, 11);
         picker.setOnDatePickedListener(this);
+        picker.getWheelLayout().setResetWhenLinkage(false);
         picker.show();
     }
 

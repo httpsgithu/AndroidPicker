@@ -50,12 +50,6 @@ public class DatimePicker extends ModalDialog {
     }
 
     @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("日期时间选择");
-    }
-
-    @Override
     protected void onCancel() {
 
     }

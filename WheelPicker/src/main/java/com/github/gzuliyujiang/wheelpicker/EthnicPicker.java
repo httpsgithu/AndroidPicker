@@ -36,7 +36,7 @@ import java.util.List;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class EthnicPicker extends OptionPicker {
-    public static final String JSON = "[{\"code\":\"01\",\"name\":\"汉族\",\"spelling\":\"Han\"}," +
+    public static String JSON = "[{\"code\":\"01\",\"name\":\"汉族\",\"spelling\":\"Han\"}," +
             "{\"code\":\"02\",\"name\":\"蒙古族\",\"spelling\":\"Mongol\"}," +
             "{\"code\":\"03\",\"name\":\"回族\",\"spelling\":\"Hui\"}," +
             "{\"code\":\"04\",\"name\":\"藏族\",\"spelling\":\"Zang\"}," +
@@ -102,33 +102,36 @@ public class EthnicPicker extends OptionPicker {
         super(activity, themeResId);
     }
 
-    @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("民族选择");
-    }
-
     public void setEthnicSpec(@EthnicSpec int ethnicSpec) {
         this.ethnicSpec = ethnicSpec;
         setData(provideData());
     }
 
+    @Override
+    public void setDefaultValue(Object item) {
+        if (item instanceof String) {
+            setDefaultValueByName(item.toString());
+        } else {
+            super.setDefaultValue(item);
+        }
+    }
+
     public void setDefaultValueByCode(String code) {
         EthnicEntity entity = new EthnicEntity();
         entity.setCode(code);
-        setDefaultValue(entity);
+        super.setDefaultValue(entity);
     }
 
     public void setDefaultValueByName(String name) {
         EthnicEntity entity = new EthnicEntity();
         entity.setName(name);
-        setDefaultValue(entity);
+        super.setDefaultValue(entity);
     }
 
     public void setDefaultValueBySpelling(String spelling) {
         EthnicEntity entity = new EthnicEntity();
         entity.setSpelling(spelling);
-        setDefaultValue(entity);
+        super.setDefaultValue(entity);
     }
 
     @Override

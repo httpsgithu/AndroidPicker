@@ -20,6 +20,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.github.gzuliyujiang.wheelpicker.R;
 import com.github.gzuliyujiang.wheelpicker.annotation.DateMode;
@@ -27,7 +28,7 @@ import com.github.gzuliyujiang.wheelpicker.contract.DateFormatter;
 import com.github.gzuliyujiang.wheelpicker.contract.OnDateSelectedListener;
 import com.github.gzuliyujiang.wheelpicker.entity.DateEntity;
 import com.github.gzuliyujiang.wheelpicker.impl.SimpleDateFormatter;
-import com.github.gzuliyujiang.wheelview.annotation.ItemTextAlign;
+import com.github.gzuliyujiang.wheelview.annotation.ScrollState;
 import com.github.gzuliyujiang.wheelview.contract.WheelFormatter;
 import com.github.gzuliyujiang.wheelview.widget.NumberWheelView;
 import com.github.gzuliyujiang.wheelview.widget.WheelView;
@@ -55,6 +56,7 @@ public class DateWheelLayout extends BaseWheelLayout {
     private Integer selectedMonth;
     private Integer selectedDay;
     private OnDateSelectedListener onDateSelectedListener;
+    private boolean resetWhenLinkage = true;
 
     public DateWheelLayout(Context context) {
         super(context);
@@ -78,11 +80,6 @@ public class DateWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected int[] provideStyleableRes() {
-        return R.styleable.DateWheelLayout;
-    }
-
-    @Override
     protected List<WheelView> provideWheelViews() {
         return Arrays.asList(yearWheelView, monthWheelView, dayWheelView);
     }
@@ -98,77 +95,69 @@ public class DateWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected void onAttributeSet(@NonNull Context context, @NonNull TypedArray typedArray) {
-        float density = context.getResources().getDisplayMetrics().density;
-        setTextSize(typedArray.getDimensionPixelSize(R.styleable.DateWheelLayout_wheel_itemTextSize,
-                (int) (15 * context.getResources().getDisplayMetrics().scaledDensity)));
-        setVisibleItemCount(typedArray.getInt(R.styleable.DateWheelLayout_wheel_visibleItemCount, 5));
-        setSameWidthEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_sameWidthEnabled, false));
-        setMaxWidthText(typedArray.getString(R.styleable.DateWheelLayout_wheel_maxWidthText));
-        setSelectedTextColor(typedArray.getColor(R.styleable.DateWheelLayout_wheel_itemTextColorSelected, 0xFF000000));
-        setTextColor(typedArray.getColor(R.styleable.DateWheelLayout_wheel_itemTextColor, 0xFF888888));
-        setItemSpace(typedArray.getDimensionPixelSize(R.styleable.DateWheelLayout_wheel_itemSpace,
-                (int) (20 * density)));
-        setCyclicEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_cyclicEnabled, false));
-        setIndicatorEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_indicatorEnabled, false));
-        setIndicatorColor(typedArray.getColor(R.styleable.DateWheelLayout_wheel_indicatorColor, 0xFFC9C9C9));
-        setIndicatorSize(typedArray.getDimension(R.styleable.DateWheelLayout_wheel_indicatorSize, 1 * density));
-        setCurvedIndicatorSpace(typedArray.getDimensionPixelSize(R.styleable.DateWheelLayout_wheel_curvedIndicatorSpace, (int) (1 * density)));
-        setCurtainEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_curtainEnabled, false));
-        setCurtainColor(typedArray.getColor(R.styleable.DateWheelLayout_wheel_curtainColor, 0x88FFFFFF));
-        setAtmosphericEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_atmosphericEnabled, false));
-        setCurvedEnabled(typedArray.getBoolean(R.styleable.DateWheelLayout_wheel_curvedEnabled, false));
-        setCurvedMaxAngle(typedArray.getInteger(R.styleable.DateWheelLayout_wheel_curvedMaxAngle, 90));
-        setTextAlign(typedArray.getInt(R.styleable.DateWheelLayout_wheel_itemTextAlign, ItemTextAlign.CENTER));
+    protected void onAttributeSet(@NonNull Context context, @Nullable AttributeSet attrs) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.DateWheelLayout);
         setDateMode(typedArray.getInt(R.styleable.DateWheelLayout_wheel_dateMode, DateMode.YEAR_MONTH_DAY));
         String yearLabel = typedArray.getString(R.styleable.DateWheelLayout_wheel_yearLabel);
         String monthLabel = typedArray.getString(R.styleable.DateWheelLayout_wheel_monthLabel);
         String dayLabel = typedArray.getString(R.styleable.DateWheelLayout_wheel_dayLabel);
+        typedArray.recycle();
         setDateLabel(yearLabel, monthLabel, dayLabel);
         setDateFormatter(new SimpleDateFormatter());
-        setRange(DateEntity.today(), DateEntity.yearOnFuture(30), DateEntity.today());
+    }
+
+    @Override
+    protected void onVisibilityChanged(@NonNull View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility == VISIBLE && startValue == null && endValue == null) {
+            setRange(DateEntity.today(), DateEntity.yearOnFuture(30), DateEntity.today());
+        }
     }
 
     @Override
     public void onWheelSelected(WheelView view, int position) {
         int id = view.getId();
         if (id == R.id.wheel_picker_date_year_wheel) {
-            selectedYear = (Integer) yearWheelView.getItem(position);
-            selectedMonth = null;
-            selectedDay = null;
+            selectedYear = yearWheelView.getItem(position);
+            if (resetWhenLinkage) {
+                selectedMonth = null;
+                selectedDay = null;
+            }
             changeMonth(selectedYear);
             dateSelectedCallback();
             return;
         }
         if (id == R.id.wheel_picker_date_month_wheel) {
-            selectedMonth = (Integer) monthWheelView.getItem(position);
-            selectedDay = null;
+            selectedMonth = monthWheelView.getItem(position);
+            if (resetWhenLinkage) {
+                selectedDay = null;
+            }
             changeDay(selectedYear, selectedMonth);
             dateSelectedCallback();
             return;
         }
         if (id == R.id.wheel_picker_date_day_wheel) {
-            selectedDay = (Integer) dayWheelView.getItem(position);
+            selectedDay = dayWheelView.getItem(position);
             dateSelectedCallback();
         }
     }
 
     @Override
-    public void onWheelScrollStateChanged(WheelView view, int state) {
+    public void onWheelScrollStateChanged(WheelView view, @ScrollState int state) {
         int id = view.getId();
         if (id == R.id.wheel_picker_date_year_wheel) {
-            monthWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            dayWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            monthWheelView.setEnabled(state == ScrollState.IDLE);
+            dayWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_date_month_wheel) {
-            yearWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            dayWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            yearWheelView.setEnabled(state == ScrollState.IDLE);
+            dayWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_date_day_wheel) {
-            yearWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            monthWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            yearWheelView.setEnabled(state == ScrollState.IDLE);
+            monthWheelView.setEnabled(state == ScrollState.IDLE);
         }
     }
 
@@ -237,6 +226,10 @@ public class DateWheelLayout extends BaseWheelLayout {
             selectedYear = defaultValue.getYear();
             selectedMonth = defaultValue.getMonth();
             selectedDay = defaultValue.getDay();
+        } else {
+            selectedYear = null;
+            selectedMonth = null;
+            selectedDay = null;
         }
         changeYear();
     }
@@ -279,6 +272,10 @@ public class DateWheelLayout extends BaseWheelLayout {
         this.onDateSelectedListener = onDateSelectedListener;
     }
 
+    public void setResetWhenLinkage(boolean resetWhenLinkage) {
+        this.resetWhenLinkage = resetWhenLinkage;
+    }
+
     public final DateEntity getStartValue() {
         return startValue;
     }
@@ -312,15 +309,15 @@ public class DateWheelLayout extends BaseWheelLayout {
     }
 
     public final int getSelectedYear() {
-        return (int) yearWheelView.getCurrentItem();
+        return yearWheelView.getCurrentItem();
     }
 
     public final int getSelectedMonth() {
-        return (int) monthWheelView.getCurrentItem();
+        return monthWheelView.getCurrentItem();
     }
 
     public final int getSelectedDay() {
-        return (int) dayWheelView.getCurrentItem();
+        return dayWheelView.getCurrentItem();
     }
 
     private void changeYear() {
@@ -328,6 +325,9 @@ public class DateWheelLayout extends BaseWheelLayout {
         final int max = Math.max(startValue.getYear(), endValue.getYear());
         if (selectedYear == null) {
             selectedYear = min;
+        } else {
+            selectedYear = Math.max(selectedYear, min);
+            selectedYear = Math.min(selectedYear, max);
         }
         yearWheelView.setRange(min, max, 1);
         yearWheelView.setDefaultValue(selectedYear);
@@ -358,6 +358,9 @@ public class DateWheelLayout extends BaseWheelLayout {
         }
         if (selectedMonth == null) {
             selectedMonth = min;
+        } else {
+            selectedMonth = Math.max(selectedMonth, min);
+            selectedMonth = Math.min(selectedMonth, max);
         }
         monthWheelView.setRange(min, max, 1);
         monthWheelView.setDefaultValue(selectedMonth);
@@ -387,6 +390,9 @@ public class DateWheelLayout extends BaseWheelLayout {
         }
         if (selectedDay == null) {
             selectedDay = min;
+        } else {
+            selectedDay = Math.max(selectedDay, min);
+            selectedDay = Math.min(selectedDay, max);
         }
         dayWheelView.setRange(min, max, 1);
         dayWheelView.setDefaultValue(selectedDay);

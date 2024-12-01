@@ -16,9 +16,11 @@ package com.github.gzuliyujiang.wheelpicker.widget;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.util.AttributeSet;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.github.gzuliyujiang.wheelpicker.R;
 import com.github.gzuliyujiang.wheelpicker.annotation.DateMode;
@@ -29,7 +31,7 @@ import com.github.gzuliyujiang.wheelpicker.contract.TimeFormatter;
 import com.github.gzuliyujiang.wheelpicker.entity.DatimeEntity;
 import com.github.gzuliyujiang.wheelpicker.impl.SimpleDateFormatter;
 import com.github.gzuliyujiang.wheelpicker.impl.SimpleTimeFormatter;
-import com.github.gzuliyujiang.wheelview.annotation.ItemTextAlign;
+import com.github.gzuliyujiang.wheelview.annotation.ScrollState;
 import com.github.gzuliyujiang.wheelview.widget.NumberWheelView;
 import com.github.gzuliyujiang.wheelview.widget.WheelView;
 
@@ -72,11 +74,6 @@ public class DatimeWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected int[] provideStyleableRes() {
-        return R.styleable.DatimeWheelLayout;
-    }
-
-    @Override
     protected List<WheelView> provideWheelViews() {
         List<WheelView> list = new ArrayList<>();
         list.addAll(dateWheelLayout.provideWheelViews());
@@ -91,28 +88,8 @@ public class DatimeWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected void onAttributeSet(@NonNull Context context, @NonNull TypedArray typedArray) {
-        float density = context.getResources().getDisplayMetrics().density;
-        setTextSize(typedArray.getDimensionPixelSize(R.styleable.DatimeWheelLayout_wheel_itemTextSize,
-                (int) (15 * context.getResources().getDisplayMetrics().scaledDensity)));
-        setVisibleItemCount(typedArray.getInt(R.styleable.DatimeWheelLayout_wheel_visibleItemCount, 5));
-        setSameWidthEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_sameWidthEnabled, false));
-        setMaxWidthText(typedArray.getString(R.styleable.DatimeWheelLayout_wheel_maxWidthText));
-        setSelectedTextColor(typedArray.getColor(R.styleable.DatimeWheelLayout_wheel_itemTextColorSelected, 0xFF000000));
-        setTextColor(typedArray.getColor(R.styleable.DatimeWheelLayout_wheel_itemTextColor, 0xFF888888));
-        setItemSpace(typedArray.getDimensionPixelSize(R.styleable.DatimeWheelLayout_wheel_itemSpace,
-                (int) (20 * density)));
-        setCyclicEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_cyclicEnabled, false));
-        setIndicatorEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_indicatorEnabled, false));
-        setIndicatorColor(typedArray.getColor(R.styleable.DatimeWheelLayout_wheel_indicatorColor, 0xFFC9C9C9));
-        setIndicatorSize(typedArray.getDimension(R.styleable.DatimeWheelLayout_wheel_indicatorSize, 1 * density));
-        setCurvedIndicatorSpace(typedArray.getDimensionPixelSize(R.styleable.DatimeWheelLayout_wheel_curvedIndicatorSpace, (int) (1 * density)));
-        setCurtainEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_curtainEnabled, false));
-        setCurtainColor(typedArray.getColor(R.styleable.DatimeWheelLayout_wheel_curtainColor, 0x88FFFFFF));
-        setAtmosphericEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_atmosphericEnabled, false));
-        setCurvedEnabled(typedArray.getBoolean(R.styleable.DatimeWheelLayout_wheel_curvedEnabled, false));
-        setCurvedMaxAngle(typedArray.getInteger(R.styleable.DatimeWheelLayout_wheel_curvedMaxAngle, 90));
-        setTextAlign(typedArray.getInt(R.styleable.DatimeWheelLayout_wheel_itemTextAlign, ItemTextAlign.CENTER));
+    protected void onAttributeSet(@NonNull Context context, @Nullable AttributeSet attrs) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.DatimeWheelLayout);
         setDateMode(typedArray.getInt(R.styleable.DatimeWheelLayout_wheel_dateMode, DateMode.YEAR_MONTH_DAY));
         setTimeMode(typedArray.getInt(R.styleable.DatimeWheelLayout_wheel_timeMode, TimeMode.HOUR_24_NO_SECOND));
         String yearLabel = typedArray.getString(R.styleable.DatimeWheelLayout_wheel_yearLabel);
@@ -122,10 +99,18 @@ public class DatimeWheelLayout extends BaseWheelLayout {
         String hourLabel = typedArray.getString(R.styleable.DatimeWheelLayout_wheel_hourLabel);
         String minuteLabel = typedArray.getString(R.styleable.DatimeWheelLayout_wheel_minuteLabel);
         String secondLabel = typedArray.getString(R.styleable.DatimeWheelLayout_wheel_secondLabel);
+        typedArray.recycle();
         setTimeLabel(hourLabel, minuteLabel, secondLabel);
         setDateFormatter(new SimpleDateFormatter());
         setTimeFormatter(new SimpleTimeFormatter(timeWheelLayout));
-        setRange(DatimeEntity.now(), DatimeEntity.yearOnFuture(30), DatimeEntity.now());
+    }
+
+    @Override
+    protected void onVisibilityChanged(@NonNull View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility == VISIBLE && startValue == null && endValue == null) {
+            setRange(DatimeEntity.now(), DatimeEntity.yearOnFuture(30), DatimeEntity.now());
+        }
     }
 
     @Override
@@ -153,7 +138,7 @@ public class DatimeWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    public void onWheelScrollStateChanged(WheelView view, int state) {
+    public void onWheelScrollStateChanged(WheelView view, @ScrollState int state) {
         dateWheelLayout.onWheelScrollStateChanged(view, state);
         timeWheelLayout.onWheelScrollStateChanged(view, state);
     }
@@ -224,6 +209,11 @@ public class DatimeWheelLayout extends BaseWheelLayout {
 
     public void setOnDatimeSelectedListener(OnDatimeSelectedListener onDatimeSelectedListener) {
         this.onDatimeSelectedListener = onDatimeSelectedListener;
+    }
+
+    public void setResetWhenLinkage(boolean dateResetWhenLinkage, boolean timeResetWhenLinkage) {
+        dateWheelLayout.setResetWhenLinkage(dateResetWhenLinkage);
+        timeWheelLayout.setResetWhenLinkage(timeResetWhenLinkage);
     }
 
     public final DatimeEntity getStartValue() {

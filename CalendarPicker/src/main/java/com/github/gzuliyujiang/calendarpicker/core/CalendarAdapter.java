@@ -14,6 +14,7 @@
 package com.github.gzuliyujiang.calendarpicker.core;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
@@ -28,12 +29,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by peng on 2017/8/3.
  */
 @SuppressWarnings("UnusedReturnValue")
 public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> implements OnDateClickListener {
+    public static String DATE_FORMAT = "yyyy年MM月";
     private boolean notify = true;
     private ColorScheme colorScheme = new ColorScheme();
     private final List<Date> dates = new ArrayList<>();
@@ -41,8 +44,16 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
     private final Interval<Date> select = new Interval<>();
     private final Interval<String> selectNote = new Interval<>();
     private boolean singleMode = false;
+    private FestivalProvider festivalProvider;
+    private ItemViewProvider itemViewProvider;
     private Date lastClickDate = null;
     private OnDateSelectedListener onDateSelectedListener;
+
+    static {
+        if (!Locale.getDefault().getDisplayLanguage().contains("中文")) {
+            DATE_FORMAT = "MMM, yyyy";
+        }
+    }
 
     public CalendarAdapter notify(boolean notify) {
         this.notify = notify;
@@ -59,6 +70,22 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
 
     public CalendarAdapter single(boolean value) {
         singleMode = value;
+        if (notify) {
+            refresh();
+        }
+        return this;
+    }
+
+    public CalendarAdapter festivalProvider(FestivalProvider value) {
+        festivalProvider = value;
+        if (notify) {
+            refresh();
+        }
+        return this;
+    }
+
+    public CalendarAdapter itemViewProvider(ItemViewProvider value) {
+        itemViewProvider = value;
         if (notify) {
             refresh();
         }
@@ -173,24 +200,32 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        LinearLayout linearLayout = new LinearLayout(parent.getContext());
+        Context context = parent.getContext();
+        LinearLayout linearLayout = new LinearLayout(context);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
         linearLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView titleView = new TextView(parent.getContext());
-        titleView.setGravity(Gravity.CENTER);
-        titleView.setTextSize(14);
-        titleView.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
-        int padding = (int) (parent.getResources().getDisplayMetrics().density * 10);
-        titleView.setPadding(padding, padding, padding, padding);
+        TextView titleView = itemViewProvider == null ? null : itemViewProvider.provideTitleView(context);
+        if (titleView == null) {
+            titleView = new TextView(context);
+            titleView.setGravity(Gravity.CENTER);
+            titleView.setTextSize(14);
+            titleView.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
+            int padding = (int) (parent.getResources().getDisplayMetrics().density * 10);
+            titleView.setPadding(padding, padding, padding, padding);
+        }
         linearLayout.addView(titleView, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        MonthView monthView = new MonthView(parent.getContext());
-        linearLayout.addView(monthView, new ViewGroup.LayoutParams(
+        MonthView monthView = itemViewProvider == null ? null : itemViewProvider.provideMonthView(context);
+        if (monthView == null) {
+            monthView = new MonthView(context);
+        }
+        monthView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+        linearLayout.addView(monthView);
         return new VH(linearLayout, titleView, monthView);
     }
 
@@ -198,11 +233,12 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
     public void onBindViewHolder(@NonNull VH holder, int position) {
         holder.titleView.setBackgroundColor(colorScheme.monthTitleBackgroundColor());
         holder.titleView.setTextColor(colorScheme.monthTitleTextColor());
-        holder.titleView.setText(TimeUtils.dateText(getDateValue(position).getTime(), TimeUtils.YY_M_CN));
+        holder.titleView.setText(TimeUtils.dateText(getDateValue(position).getTime(), DATE_FORMAT));
         holder.monthView.setOnDayInMonthClickListener(this);
         holder.monthView.setValue(MonthEntity.obtain(valid, select)
                 .date(dates.get(position))
                 .singleMode(singleMode)
+                .festivalProvider(festivalProvider)
                 .note(selectNote), colorScheme);
     }
 
@@ -214,6 +250,9 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
     public final int getDatePosition(Date date) {
         int size = dates.size();
         if (size <= 1) {
+            return 0;
+        }
+        if (date == null) {
             return 0;
         }
         long time = date.getTime();
@@ -230,11 +269,13 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
             minDate.set(Calendar.HOUR_OF_DAY, 0);
             minDate.set(Calendar.MINUTE, 0);
             minDate.set(Calendar.SECOND, 0);
+            minDate.set(Calendar.MILLISECOND, 0);
             Calendar maxDate = DateUtils.calendar(dates.get(i).getTime());
             maxDate.set(Calendar.DAY_OF_MONTH, DateUtils.maxDaysOfMonth(maxDate.getTime()));
             maxDate.set(Calendar.HOUR_OF_DAY, 23);
             maxDate.set(Calendar.MINUTE, 59);
             maxDate.set(Calendar.SECOND, 59);
+            maxDate.set(Calendar.MILLISECOND, 999);
             if (time >= minDate.getTime().getTime() && time <= maxDate.getTime().getTime()) {
                 return i;
             }
@@ -254,27 +295,22 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.VH> im
         if (null == date) {
             return;
         }
-        if (null == lastClickDate || singleMode) {
+        if (singleMode || null == lastClickDate || lastClickDate.getTime() >= date.getTime()) {
             lastClickDate = date;
             select(date, date).refresh();
             if (null != onDateSelectedListener) {
                 onDateSelectedListener.onSingleSelected(date);
+            }
+            if (!singleMode && null != onDateSelectedListener) {
+                onDateSelectedListener.onRangeSelected(date, date);
             }
             return;
         }
-        if (lastClickDate.getTime() >= date.getTime()) {
-            lastClickDate = date;
-            select(date, date).refresh();
-            if (null != onDateSelectedListener) {
-                onDateSelectedListener.onSingleSelected(date);
-            }
-        } else {
-            select(lastClickDate, date).refresh();
-            if (null != onDateSelectedListener) {
-                onDateSelectedListener.onRangeSelected(lastClickDate, date);
-            }
-            lastClickDate = null;
+        select(lastClickDate, date).refresh();
+        if (null != onDateSelectedListener) {
+            onDateSelectedListener.onRangeSelected(lastClickDate, date);
         }
+        lastClickDate = null;
     }
 
     static class VH extends RecyclerView.ViewHolder {

@@ -26,11 +26,14 @@ import com.github.gzuliyujiang.calendarpicker.OnSingleDatePickListener;
 import com.github.gzuliyujiang.calendarpicker.core.CalendarView;
 import com.github.gzuliyujiang.calendarpicker.core.ColorScheme;
 import com.github.gzuliyujiang.calendarpicker.core.DateUtils;
+import com.github.gzuliyujiang.calendarpicker.core.FestivalProvider;
 import com.github.gzuliyujiang.fallback.R;
 
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * 日历日期选择器
@@ -45,14 +48,26 @@ public class CalendarPickerActivity extends BackAbleActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_picker_calendar);
-        CalendarView calendarView = findViewById(R.id.calendar_picker_body);
         Date minDate = new Date(System.currentTimeMillis() - 5 * android.text.format.DateUtils.DAY_IN_MILLIS);
         Calendar calendar = DateUtils.calendar(minDate);
         calendar.add(Calendar.MONTH, 3);
         Date maxDate = calendar.getTime();
-        calendarView.getAdapter()
+        CalendarView horizontalCalendarView = findViewById(R.id.calendar_picker_body_horizontal);
+        horizontalCalendarView.enablePagerSnap();
+        horizontalCalendarView.getAdapter()
                 .notify(false)
                 .single(false)
+                .festivalProvider(new MyFestivalProvider())
+                .valid(minDate, maxDate)
+                .intervalNotes("开始", "结束")
+                .select(minDate.getTime(), minDate.getTime() + 5 * android.text.format.DateUtils.DAY_IN_MILLIS)
+                .range(minDate, maxDate)
+                .refresh();
+        CalendarView verticalCalendarView = findViewById(R.id.calendar_picker_body_vertical);
+        verticalCalendarView.getAdapter()
+                .notify(false)
+                .single(false)
+                .festivalProvider(new MyFestivalProvider())
                 .valid(minDate, maxDate)
                 .intervalNotes("开始", "结束")
                 .select(minDate.getTime(), minDate.getTime() + 5 * android.text.format.DateUtils.DAY_IN_MILLIS)
@@ -78,6 +93,11 @@ public class CalendarPickerActivity extends BackAbleActivity {
                 endTimeInMillis = endDate.getTime();
                 Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(startDate)
                         + "\n" + DateFormat.getDateTimeInstance().format(endDate), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onMonthChanged(Date date) {
+                Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
             }
         });
         picker.show();
@@ -109,6 +129,11 @@ public class CalendarPickerActivity extends BackAbleActivity {
                 Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(startDate)
                         + "\n" + DateFormat.getDateTimeInstance().format(endDate), Toast.LENGTH_SHORT).show();
             }
+
+            @Override
+            public void onMonthChanged(Date date) {
+                Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
+            }
         });
         picker.show();
     }
@@ -120,15 +145,81 @@ public class CalendarPickerActivity extends BackAbleActivity {
             singleTimeInMillis = System.currentTimeMillis();
         }
         picker.setSelectedDate(singleTimeInMillis);
+        picker.setFestivalProvider(new MyFestivalProvider());
         picker.setOnSingleDatePickListener(new OnSingleDatePickListener() {
             @Override
             public void onSingleDatePicked(@NonNull Date date) {
                 singleTimeInMillis = date.getTime();
                 Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
             }
+
+            @Override
+            public void onMonthChanged(Date date) {
+                Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
+            }
         });
         picker.show();
     }
+
+    public void onHorizontalCalendarPicker(View view) {
+        CalendarPicker picker = new CalendarPicker(this);
+        picker.enablePagerSnap();
+        picker.setRangeDateOnFuture(3);
+        picker.setFestivalProvider(new MyFestivalProvider());
+        picker.setOnSingleDatePickListener(new OnSingleDatePickListener() {
+            @Override
+            public void onSingleDatePicked(@NonNull Date date) {
+                singleTimeInMillis = date.getTime();
+                Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onMonthChanged(Date date) {
+                Toast.makeText(getApplicationContext(), DateFormat.getDateTimeInstance().format(date), Toast.LENGTH_SHORT).show();
+            }
+        });
+        picker.show();
+    }
+
+    private static class MyFestivalProvider implements FestivalProvider {
+        @Override
+        public String provideText(Date date) {
+            String monthDay = new SimpleDateFormat("MMdd", Locale.PRC).format(date);
+            switch (monthDay) {
+                case "0101":
+                    return "元旦节";
+                case "0214":
+                    return "情人节";
+                case "0308":
+                    return "妇女节";
+                case "0312":
+                    return "植树节";
+                case "0401":
+                    return "愚人节";
+                case "0501":
+                    return "劳动节";
+                case "0504":
+                    return "青年节";
+                case "0601":
+                    return "儿童节";
+                case "0701":
+                    return "建党节";
+                case "0801":
+                    return "建军节";
+                case "0910":
+                    return "教师节";
+                case "1001":
+                    return "国庆节";
+                case "1111":
+                    return "光棍节";
+                case "1225":
+                    return "圣诞节";
+                default:
+                    return "";
+            }
+        }
+    }
+
 
 }
 

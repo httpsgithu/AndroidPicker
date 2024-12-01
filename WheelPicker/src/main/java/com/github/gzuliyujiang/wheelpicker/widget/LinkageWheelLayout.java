@@ -19,12 +19,14 @@ import android.util.AttributeSet;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.github.gzuliyujiang.wheelpicker.R;
 import com.github.gzuliyujiang.wheelpicker.contract.LinkageProvider;
 import com.github.gzuliyujiang.wheelpicker.contract.OnLinkageSelectedListener;
-import com.github.gzuliyujiang.wheelview.annotation.ItemTextAlign;
+import com.github.gzuliyujiang.wheelview.annotation.ScrollState;
 import com.github.gzuliyujiang.wheelview.contract.WheelFormatter;
 import com.github.gzuliyujiang.wheelview.widget.WheelView;
 
@@ -68,16 +70,13 @@ public class LinkageWheelLayout extends BaseWheelLayout {
         return R.layout.wheel_picker_linkage;
     }
 
-    @Override
-    protected int[] provideStyleableRes() {
-        return R.styleable.LinkageWheelLayout;
-    }
-
+    @CallSuper
     @Override
     protected List<WheelView> provideWheelViews() {
         return Arrays.asList(firstWheelView, secondWheelView, thirdWheelView);
     }
 
+    @CallSuper
     @Override
     protected void onInit(@NonNull Context context) {
         firstWheelView = findViewById(R.id.wheel_picker_linkage_first_wheel);
@@ -89,37 +88,20 @@ public class LinkageWheelLayout extends BaseWheelLayout {
         loadingView = findViewById(R.id.wheel_picker_linkage_loading);
     }
 
+    @CallSuper
     @Override
-    protected void onAttributeSet(@NonNull Context context, @NonNull TypedArray typedArray) {
-        float density = context.getResources().getDisplayMetrics().density;
-        setTextSize(typedArray.getDimensionPixelSize(R.styleable.LinkageWheelLayout_wheel_itemTextSize,
-                (int) (15 * context.getResources().getDisplayMetrics().scaledDensity)));
-        setVisibleItemCount(typedArray.getInt(R.styleable.LinkageWheelLayout_wheel_visibleItemCount, 5));
-        setSameWidthEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_sameWidthEnabled, false));
-        setMaxWidthText(typedArray.getString(R.styleable.LinkageWheelLayout_wheel_maxWidthText));
-        setSelectedTextColor(typedArray.getColor(R.styleable.LinkageWheelLayout_wheel_itemTextColorSelected, 0xFF000000));
-        setTextColor(typedArray.getColor(R.styleable.LinkageWheelLayout_wheel_itemTextColor, 0xFF888888));
-        setItemSpace(typedArray.getDimensionPixelSize(R.styleable.LinkageWheelLayout_wheel_itemSpace,
-                (int) (20 * density)));
-        setCyclicEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_cyclicEnabled, false));
-        setIndicatorEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_indicatorEnabled, false));
-        setIndicatorColor(typedArray.getColor(R.styleable.LinkageWheelLayout_wheel_indicatorColor, 0xFFC9C9C9));
-        setIndicatorSize(typedArray.getDimension(R.styleable.LinkageWheelLayout_wheel_indicatorSize, 1 * density));
-        setCurvedIndicatorSpace(typedArray.getDimensionPixelSize(R.styleable.LinkageWheelLayout_wheel_curvedIndicatorSpace, (int) (1 * density)));
-        setCurtainEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_curtainEnabled, false));
-        setCurtainColor(typedArray.getColor(R.styleable.LinkageWheelLayout_wheel_curtainColor, 0x88FFFFFF));
-        setAtmosphericEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_atmosphericEnabled, false));
-        setCurvedEnabled(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_curvedEnabled, false));
-        setCurvedMaxAngle(typedArray.getInteger(R.styleable.LinkageWheelLayout_wheel_curvedMaxAngle, 90));
-        setTextAlign(typedArray.getInt(R.styleable.LinkageWheelLayout_wheel_itemTextAlign, ItemTextAlign.CENTER));
+    protected void onAttributeSet(@NonNull Context context, @Nullable AttributeSet attrs) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.LinkageWheelLayout);
         setFirstVisible(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_firstVisible, true));
         setThirdVisible(typedArray.getBoolean(R.styleable.LinkageWheelLayout_wheel_thirdVisible, true));
         String firstLabel = typedArray.getString(R.styleable.LinkageWheelLayout_wheel_firstLabel);
         String secondLabel = typedArray.getString(R.styleable.LinkageWheelLayout_wheel_secondLabel);
         String thirdLabel = typedArray.getString(R.styleable.LinkageWheelLayout_wheel_thirdLabel);
+        typedArray.recycle();
         setLabel(firstLabel, secondLabel, thirdLabel);
     }
 
+    @CallSuper
     @Override
     public void onWheelSelected(WheelView view, int position) {
         int id = view.getId();
@@ -145,22 +127,23 @@ public class LinkageWheelLayout extends BaseWheelLayout {
         }
     }
 
+    @CallSuper
     @Override
-    public void onWheelScrollStateChanged(WheelView view, int state) {
+    public void onWheelScrollStateChanged(WheelView view, @ScrollState int state) {
         int id = view.getId();
         if (id == R.id.wheel_picker_linkage_first_wheel) {
-            secondWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            thirdWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            secondWheelView.setEnabled(state == ScrollState.IDLE);
+            thirdWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_linkage_second_wheel) {
-            firstWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            thirdWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            firstWheelView.setEnabled(state == ScrollState.IDLE);
+            thirdWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_linkage_third_wheel) {
-            firstWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            secondWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            firstWheelView.setEnabled(state == ScrollState.IDLE);
+            secondWheelView.setEnabled(state == ScrollState.IDLE);
         }
     }
 

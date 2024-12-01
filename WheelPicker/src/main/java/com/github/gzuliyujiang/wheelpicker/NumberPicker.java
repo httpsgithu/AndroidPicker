@@ -53,12 +53,6 @@ public class NumberPicker extends ModalDialog {
     }
 
     @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("请选择");
-    }
-
-    @Override
     protected void onCancel() {
 
     }
@@ -67,8 +61,8 @@ public class NumberPicker extends ModalDialog {
     protected void onOk() {
         if (onNumberPickedListener != null) {
             int position = wheelLayout.getWheelView().getCurrentPosition();
-            Object item = wheelLayout.getWheelView().getCurrentItem();
-            onNumberPickedListener.onNumberPicked(position, (Number) item);
+            Number item = wheelLayout.getWheelView().getCurrentItem();
+            onNumberPickedListener.onNumberPicked(position, item);
         }
     }
 

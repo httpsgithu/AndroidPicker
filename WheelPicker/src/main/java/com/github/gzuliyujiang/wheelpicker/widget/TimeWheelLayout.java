@@ -20,6 +20,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.github.gzuliyujiang.wheelpicker.R;
 import com.github.gzuliyujiang.wheelpicker.annotation.TimeMode;
@@ -28,7 +29,7 @@ import com.github.gzuliyujiang.wheelpicker.contract.OnTimeSelectedListener;
 import com.github.gzuliyujiang.wheelpicker.contract.TimeFormatter;
 import com.github.gzuliyujiang.wheelpicker.entity.TimeEntity;
 import com.github.gzuliyujiang.wheelpicker.impl.SimpleTimeFormatter;
-import com.github.gzuliyujiang.wheelview.annotation.ItemTextAlign;
+import com.github.gzuliyujiang.wheelview.annotation.ScrollState;
 import com.github.gzuliyujiang.wheelview.contract.WheelFormatter;
 import com.github.gzuliyujiang.wheelview.widget.NumberWheelView;
 import com.github.gzuliyujiang.wheelview.widget.WheelView;
@@ -53,13 +54,18 @@ public class TimeWheelLayout extends BaseWheelLayout {
     private WheelView meridiemWheelView;
     private TimeEntity startValue;
     private TimeEntity endValue;
+    private TimeEntity defaultValue;
     private Integer selectedHour;
     private Integer selectedMinute;
     private Integer selectedSecond;
     private boolean isAnteMeridiem;
     private int timeMode;
+    private int hourStep = 1;
+    private int minuteStep = 1;
+    private int secondStep = 1;
     private OnTimeSelectedListener onTimeSelectedListener;
     private OnTimeMeridiemSelectedListener onTimeMeridiemSelectedListener;
+    private boolean resetWhenLinkage = true;
 
     public TimeWheelLayout(Context context) {
         super(context);
@@ -83,11 +89,6 @@ public class TimeWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected int[] provideStyleableRes() {
-        return R.styleable.TimeWheelLayout;
-    }
-
-    @Override
     protected List<WheelView> provideWheelViews() {
         return Arrays.asList(hourWheelView, minuteWheelView, secondWheelView, meridiemWheelView);
     }
@@ -104,78 +105,75 @@ public class TimeWheelLayout extends BaseWheelLayout {
     }
 
     @Override
-    protected void onAttributeSet(@NonNull Context context, @NonNull TypedArray typedArray) {
-        float density = context.getResources().getDisplayMetrics().density;
-        setTextSize(typedArray.getDimensionPixelSize(R.styleable.TimeWheelLayout_wheel_itemTextSize,
-                (int) (15 * context.getResources().getDisplayMetrics().scaledDensity)));
-        setVisibleItemCount(typedArray.getInt(R.styleable.TimeWheelLayout_wheel_visibleItemCount, 5));
-        setSameWidthEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_sameWidthEnabled, false));
-        setMaxWidthText(typedArray.getString(R.styleable.TimeWheelLayout_wheel_maxWidthText));
-        setSelectedTextColor(typedArray.getColor(R.styleable.TimeWheelLayout_wheel_itemTextColorSelected, 0xFF000000));
-        setTextColor(typedArray.getColor(R.styleable.TimeWheelLayout_wheel_itemTextColor, 0xFF888888));
-        setItemSpace(typedArray.getDimensionPixelSize(R.styleable.TimeWheelLayout_wheel_itemSpace,
-                (int) (20 * density)));
-        setCyclicEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_cyclicEnabled, false));
-        setIndicatorEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_indicatorEnabled, false));
-        setIndicatorColor(typedArray.getColor(R.styleable.TimeWheelLayout_wheel_indicatorColor, 0xFFC9C9C9));
-        setIndicatorSize(typedArray.getDimension(R.styleable.TimeWheelLayout_wheel_indicatorSize, 1 * density));
-        setCurvedIndicatorSpace(typedArray.getDimensionPixelSize(R.styleable.TimeWheelLayout_wheel_curvedIndicatorSpace, (int) (1 * density)));
-        setCurtainEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_curtainEnabled, false));
-        setCurtainColor(typedArray.getColor(R.styleable.TimeWheelLayout_wheel_curtainColor, 0x88FFFFFF));
-        setAtmosphericEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_atmosphericEnabled, false));
-        setCurvedEnabled(typedArray.getBoolean(R.styleable.TimeWheelLayout_wheel_curvedEnabled, false));
-        setCurvedMaxAngle(typedArray.getInteger(R.styleable.TimeWheelLayout_wheel_curvedMaxAngle, 90));
-        setTextAlign(typedArray.getInt(R.styleable.TimeWheelLayout_wheel_itemTextAlign, ItemTextAlign.CENTER));
+    protected void onAttributeSet(@NonNull Context context, @Nullable AttributeSet attrs) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.TimeWheelLayout);
         setTimeMode(typedArray.getInt(R.styleable.TimeWheelLayout_wheel_timeMode, TimeMode.HOUR_24_NO_SECOND));
         String hourLabel = typedArray.getString(R.styleable.TimeWheelLayout_wheel_hourLabel);
         String minuteLabel = typedArray.getString(R.styleable.TimeWheelLayout_wheel_minuteLabel);
         String secondLabel = typedArray.getString(R.styleable.TimeWheelLayout_wheel_secondLabel);
+        typedArray.recycle();
         setTimeLabel(hourLabel, minuteLabel, secondLabel);
         setTimeFormatter(new SimpleTimeFormatter(this));
-        setRange(TimeEntity.target(0, 0, 0),
-                TimeEntity.target(23, 59, 59), TimeEntity.now());
+    }
+
+    @Override
+    protected void onVisibilityChanged(@NonNull View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility == VISIBLE && startValue == null && endValue == null) {
+            setRange(TimeEntity.target(0, 0, 0),
+                    TimeEntity.target(23, 59, 59), TimeEntity.now());
+        }
     }
 
     @Override
     public void onWheelSelected(WheelView view, int position) {
         int id = view.getId();
         if (id == R.id.wheel_picker_time_hour_wheel) {
-            selectedHour = (Integer) hourWheelView.getItem(position);
-            selectedMinute = null;
-            selectedSecond = null;
+            selectedHour = hourWheelView.getItem(position);
+            if (resetWhenLinkage) {
+                selectedMinute = null;
+                selectedSecond = null;
+            }
             changeMinute(selectedHour);
             timeSelectedCallback();
             return;
         }
         if (id == R.id.wheel_picker_time_minute_wheel) {
-            selectedMinute = (Integer) minuteWheelView.getItem(position);
-            selectedSecond = null;
+            selectedMinute = minuteWheelView.getItem(position);
+            if (resetWhenLinkage) {
+                selectedSecond = null;
+            }
             changeSecond();
             timeSelectedCallback();
             return;
         }
         if (id == R.id.wheel_picker_time_second_wheel) {
-            selectedSecond = (Integer) secondWheelView.getItem(position);
+            selectedSecond = secondWheelView.getItem(position);
+            timeSelectedCallback();
+            return;
+        }
+        if (id == R.id.wheel_picker_time_meridiem_wheel) {
+            isAnteMeridiem = "AM".equalsIgnoreCase(meridiemWheelView.getItem(position));
             timeSelectedCallback();
         }
     }
 
     @Override
-    public void onWheelScrollStateChanged(WheelView view, int state) {
+    public void onWheelScrollStateChanged(WheelView view, @ScrollState int state) {
         int id = view.getId();
         if (id == R.id.wheel_picker_time_hour_wheel) {
-            minuteWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            secondWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            minuteWheelView.setEnabled(state == ScrollState.IDLE);
+            secondWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_time_minute_wheel) {
-            hourWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            secondWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            hourWheelView.setEnabled(state == ScrollState.IDLE);
+            secondWheelView.setEnabled(state == ScrollState.IDLE);
             return;
         }
         if (id == R.id.wheel_picker_time_second_wheel) {
-            hourWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
-            minuteWheelView.setEnabled(state == WheelView.SCROLL_STATE_IDLE);
+            hourWheelView.setEnabled(state == ScrollState.IDLE);
+            minuteWheelView.setEnabled(state == ScrollState.IDLE);
         }
     }
 
@@ -255,13 +253,14 @@ public class TimeWheelLayout extends BaseWheelLayout {
         }
         this.startValue = startValue;
         this.endValue = endValue;
-        if (defaultValue != null) {
-            isAnteMeridiem = defaultValue.getHour() <= 12;
-            defaultValue.setHour(wrapHour(defaultValue.getHour()));
-            selectedHour = defaultValue.getHour();
-            selectedMinute = defaultValue.getMinute();
-            selectedSecond = defaultValue.getSecond();
+        if (defaultValue == null) {
+            defaultValue = startValue;
         }
+        this.defaultValue = defaultValue;
+        isAnteMeridiem = defaultValue.getHour() < 12 || defaultValue.getHour() == 24;
+        selectedHour = fixHour(defaultValue.getHour());
+        selectedMinute = defaultValue.getMinute();
+        selectedSecond = defaultValue.getSecond();
         changeHour();
         changeAnteMeridiem();
     }
@@ -308,6 +307,23 @@ public class TimeWheelLayout extends BaseWheelLayout {
         this.onTimeMeridiemSelectedListener = onTimeMeridiemSelectedListener;
     }
 
+    public void setResetWhenLinkage(boolean resetWhenLinkage) {
+        this.resetWhenLinkage = resetWhenLinkage;
+    }
+
+    public void setTimeStep(int hourStep, int minuteStep, int secondStep) {
+        this.hourStep = hourStep;
+        this.minuteStep = minuteStep;
+        this.secondStep = secondStep;
+        if (isDataAlready()) {
+            setRange(startValue, endValue, defaultValue);
+        }
+    }
+
+    protected boolean isDataAlready() {
+        return startValue != null && endValue != null;
+    }
+
     public final TimeEntity getStartValue() {
         return startValue;
     }
@@ -350,19 +366,24 @@ public class TimeWheelLayout extends BaseWheelLayout {
     }
 
     public final int getSelectedHour() {
-        int hour = (int) hourWheelView.getCurrentItem();
-        return wrapHour(hour);
+        int hour = hourWheelView.getCurrentItem();
+        return fixHour(hour);
     }
 
-    private int wrapHour(int hour) {
-        if (isHour12Mode() && hour > 12) {
-            hour = hour - 12;
+    private int fixHour(int hour) {
+        if (isHour12Mode()) {
+            if (hour == 0) {
+                hour = 24;
+            }
+            if (hour > 12) {
+                hour = hour - 12;
+            }
         }
         return hour;
     }
 
     public final int getSelectedMinute() {
-        return (int) minuteWheelView.getCurrentItem();
+        return minuteWheelView.getCurrentItem();
     }
 
     public final int getSelectedSecond() {
@@ -370,11 +391,15 @@ public class TimeWheelLayout extends BaseWheelLayout {
                 || timeMode == TimeMode.HOUR_24_NO_SECOND) {
             return 0;
         }
-        return (int) secondWheelView.getCurrentItem();
+        return secondWheelView.getCurrentItem();
     }
 
     public final boolean isAnteMeridiem() {
-        return meridiemWheelView.getCurrentItem().toString().equalsIgnoreCase("AM");
+        Object currentItem = meridiemWheelView.getCurrentItem();
+        if (currentItem == null) {
+            return isAnteMeridiem;
+        }
+        return "AM".equalsIgnoreCase(currentItem.toString());
     }
 
     private void changeHour() {
@@ -386,8 +411,11 @@ public class TimeWheelLayout extends BaseWheelLayout {
         max = Math.min(maxHour, max);
         if (selectedHour == null) {
             selectedHour = min;
+        } else {
+            selectedHour = Math.max(selectedHour, min);
+            selectedHour = Math.min(selectedHour, max);
         }
-        hourWheelView.setRange(min, max, 1);
+        hourWheelView.setRange(min, max, hourStep);
         hourWheelView.setDefaultValue(selectedHour);
         changeMinute(selectedHour);
     }
@@ -414,8 +442,11 @@ public class TimeWheelLayout extends BaseWheelLayout {
         }
         if (selectedMinute == null) {
             selectedMinute = min;
+        } else {
+            selectedMinute = Math.max(selectedMinute, min);
+            selectedMinute = Math.min(selectedMinute, max);
         }
-        minuteWheelView.setRange(min, max, 1);
+        minuteWheelView.setRange(min, max, minuteStep);
         minuteWheelView.setDefaultValue(selectedMinute);
         changeSecond();
     }
@@ -424,7 +455,7 @@ public class TimeWheelLayout extends BaseWheelLayout {
         if (selectedSecond == null) {
             selectedSecond = 0;
         }
-        secondWheelView.setRange(0, 59, 1);
+        secondWheelView.setRange(0, 59, secondStep);
         secondWheelView.setDefaultValue(selectedSecond);
     }
 

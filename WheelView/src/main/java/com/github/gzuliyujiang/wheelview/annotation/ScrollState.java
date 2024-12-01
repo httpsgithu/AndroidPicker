@@ -11,14 +11,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package com.github.gzuliyujiang.wheelpicker.contract;
+package com.github.gzuliyujiang.wheelview.annotation;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
- * @since 2021/6/9 11:53
+ * @since 2021/10/28 11:28
  */
-public interface OnCarNumberPickedListener {
-
-    void onCarNumberPicked(String province, String letter);
-
+@Retention(RetentionPolicy.SOURCE)
+public @interface ScrollState {
+    int IDLE = 0;
+    int DRAGGING = 1;
+    int SCROLLING = 2;
 }

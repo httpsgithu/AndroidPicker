@@ -60,12 +60,6 @@ public class OptionPicker extends ModalDialog {
     }
 
     @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("请选择");
-    }
-
-    @Override
     protected void initData() {
         super.initData();
         initialized = true;

@@ -18,10 +18,15 @@ import android.app.Activity;
 import androidx.annotation.NonNull;
 import androidx.annotation.StyleRes;
 
-import java.util.Arrays;
-import java.util.LinkedList;
+import com.github.gzuliyujiang.dialog.DialogLog;
+import com.github.gzuliyujiang.wheelpicker.entity.SexEntity;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * 性别选择器
@@ -31,53 +36,63 @@ import java.util.Locale;
  */
 @SuppressWarnings("WeakerAccess")
 public class SexPicker extends OptionPicker {
-    public static final List<String> DATA_CN = Arrays.asList(
-            "男", "女"
-    );
-    public static final List<String> DATA_EN = Arrays.asList(
-            "Male", "Female"
-    );
-    private final boolean includeSecrecy;
+    public static String JSON = "[{\"id\":0,\"name\":\"保密\",\"english\":\"Secrecy\"},\n" +
+            "{\"id\":1,\"name\":\"男\",\"english\":\"Male\"},\n" +
+            "{\"id\":2,\"name\":\"女\",\"english\":\"Female\"}]";
+    private boolean includeSecrecy;
 
     public SexPicker(Activity activity) {
-        this(activity, false);
+        super(activity);
     }
 
     public SexPicker(@NonNull Activity activity, @StyleRes int themeResId) {
         super(activity, themeResId);
-        this.includeSecrecy = false;
     }
 
-    public SexPicker(Activity activity, boolean includeSecrecy) {
-        super(activity);
+    public void setIncludeSecrecy(boolean includeSecrecy) {
         this.includeSecrecy = includeSecrecy;
-    }
-
-    public SexPicker(@NonNull Activity activity, @StyleRes int themeResId, boolean includeSecrecy) {
-        super(activity, themeResId);
-        this.includeSecrecy = includeSecrecy;
+        setData(provideData());
     }
 
     @Override
-    protected void initView() {
-        super.initView();
-        titleView.setText("性别选择");
+    public void setDefaultValue(Object item) {
+        if (item instanceof String) {
+            setDefaultValueByName(item.toString());
+        } else {
+            super.setDefaultValue(item);
+        }
+    }
+
+    public void setDefaultValueByName(String name) {
+        SexEntity entity = new SexEntity();
+        entity.setName(name);
+        super.setDefaultValue(entity);
+    }
+
+    public void setDefaultValueByEnglish(String english) {
+        SexEntity entity = new SexEntity();
+        entity.setEnglish(english);
+        super.setDefaultValue(entity);
     }
 
     @Override
     protected List<?> provideData() {
-        boolean isChinese = Locale.getDefault().getDisplayLanguage().contains("中文");
-        LinkedList<String> data = new LinkedList<>();
-        if (isChinese) {
-            data.addAll(DATA_CN);
-            if (includeSecrecy) {
-                data.addFirst("保密");
+        ArrayList<SexEntity> data = new ArrayList<>();
+        try {
+            JSONArray jsonArray = new JSONArray(JSON);
+            for (int i = 0, n = jsonArray.length(); i < n; i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                SexEntity entity = new SexEntity();
+                entity.setId(jsonObject.getString("id"));
+                entity.setName(jsonObject.getString("name"));
+                entity.setEnglish(jsonObject.getString("english"));
+                if (!includeSecrecy && "0".equals(entity.getId())) {
+                    continue;
+                }
+                data.add(entity);
             }
-        } else {
-            data.addAll(DATA_EN);
-            if (includeSecrecy) {
-                data.addFirst("Unlimited");
-            }
+        } catch (JSONException e) {
+            DialogLog.print(e);
         }
         return data;
     }

@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StyleRes;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,7 +26,6 @@ import com.github.gzuliyujiang.dialog.DialogLog;
 import com.github.gzuliyujiang.dialog.ModalDialog;
 import com.github.gzuliyujiang.filepicker.annotation.ExplorerMode;
 import com.github.gzuliyujiang.filepicker.contract.OnFileClickedListener;
-import com.github.gzuliyujiang.filepicker.contract.OnFilePickedListener;
 
 import java.io.File;
 
@@ -37,11 +37,9 @@ import java.io.File;
  */
 @SuppressWarnings("unused")
 public class FilePicker extends ModalDialog {
-    private int explorerMode = ExplorerMode.FILE;
-    private File initDir;
     private FileExplorer fileExplorer;
-    private OnFilePickedListener onFilePickedListener;
     private boolean initialized = false;
+    private ExplorerConfig explorerConfig;
 
     public FilePicker(Activity activity) {
         super(activity);
@@ -62,17 +60,26 @@ public class FilePicker extends ModalDialog {
     protected void initView() {
         super.initView();
         setHeight((int) (activity.getResources().getDisplayMetrics().heightPixels * 0.6f));
-        titleView.setText(explorerMode == ExplorerMode.FILE ? "文件选择" : "目录选择");
-        if (explorerMode == ExplorerMode.FILE) {
-            okView.setVisibility(View.GONE);
-        }
     }
 
     @Override
     protected void initData() {
         super.initData();
         initialized = true;
-        setInitDir(explorerMode, initDir);
+        setExplorerConfig(explorerConfig);
+        final ExplorerConfig config = fileExplorer.getExplorerConfig();
+        config.setOnFileClickedListener(new OnFileClickedListener() {
+            @Override
+            public void onFileClicked(@NonNull File file) {
+                if (config.getExplorerMode() == ExplorerMode.FILE) {
+                    dismiss();
+                    config.getOnFilePickedListener().onFilePicked(file);
+                }
+            }
+        });
+        if (config.getExplorerMode() == ExplorerMode.FILE) {
+            okView.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -84,36 +91,28 @@ public class FilePicker extends ModalDialog {
     protected void onOk() {
         File currentFile = fileExplorer.getCurrentFile();
         DialogLog.print("picked directory: " + currentFile);
-        if (onFilePickedListener != null) {
-            onFilePickedListener.onFilePicked(currentFile);
+        if (fileExplorer.getExplorerConfig().getOnFilePickedListener() != null) {
+            fileExplorer.getExplorerConfig().getOnFilePickedListener().onFilePicked(currentFile);
         }
     }
 
-    public void setInitDir(@ExplorerMode int explorerMode, File initDir) {
-        this.explorerMode = explorerMode;
-        this.initDir = initDir;
+    /**
+     * 设置文件管理器配置
+     */
+    public void setExplorerConfig(@Nullable ExplorerConfig config) {
+        explorerConfig = config;
         if (initialized) {
-            fileExplorer.setInitDir(explorerMode, initDir);
+            fileExplorer.load(config);
         }
-    }
-
-    public void setOnFilePickedListener(OnFilePickedListener listener) {
-        this.onFilePickedListener = listener;
-        fileExplorer.setOnFileClickedListener(new OnFileClickedListener() {
-            @Override
-            public void onFileClicked(@NonNull File file) {
-                if (explorerMode == ExplorerMode.FILE) {
-                    dismiss();
-                    onFilePickedListener.onFilePicked(file);
-                }
-            }
-        });
     }
 
     public final File getCurrentFile() {
         return fileExplorer.getCurrentFile();
     }
 
+    /**
+     * 获取文件管理器对象
+     */
     public final FileExplorer getFileExplorer() {
         return fileExplorer;
     }
